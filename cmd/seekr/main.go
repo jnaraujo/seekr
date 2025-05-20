@@ -17,8 +17,5 @@ func main() {
 		log.Fatalf("Failed to get embedding: %v", err)
 	}
 
-	fmt.Println("Embedding vector:")
-	for i, v := range embVector {
-		fmt.Printf("[%d]: %.6f\n", i, v)
-	}
+	fmt.Println("Embedding vector:", len(embVector))
 }

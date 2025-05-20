@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -84,6 +85,10 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 	if len(er.Embedding) == 0 {
 		return nil, errors.New("no embeddings returned")
 	}
+
+	slog.Info("embedding request duration", "duration_ms", er.TotalDuration/int(time.Millisecond))
+	slog.Info("embedding request load duration", "duration", er.LoadDuration/int(time.Millisecond))
+	slog.Info("embedding request eval count", "count", er.PromptEvalCount)
 
 	return er.Embedding[0], nil
 }
