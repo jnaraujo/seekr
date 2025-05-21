@@ -7,15 +7,21 @@ import (
 
 	"github.com/jnaraujo/seekr/internal/embeddings"
 	"github.com/jnaraujo/seekr/internal/env"
+	"github.com/jnaraujo/seekr/internal/vector"
 )
 
 func main() {
 	var embeddingProvider embeddings.Provider = embeddings.NewOllamaProvider("nomic-embed-text", env.Env.OllamaAPIUrl)
 
-	embVector, err := embeddingProvider.Embed(context.Background(), "ola como vai")
+	vec1, err := embeddingProvider.Embed(context.Background(), "the car is red")
 	if err != nil {
 		log.Fatalf("Failed to get embedding: %v", err)
 	}
 
-	fmt.Println("Embedding vector:", len(embVector))
+	vec2, err := embeddingProvider.Embed(context.Background(), "the sky is blue")
+	if err != nil {
+		log.Fatalf("Failed to get embedding: %v", err)
+	}
+
+	fmt.Println(vector.CosineSimilarity(vec1, vec2))
 }
