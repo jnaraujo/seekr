@@ -57,3 +57,34 @@ func IsNormalized(v []float32) bool {
 	magnitude := math.Sqrt(sumSquares)
 	return math.Abs(magnitude-1) < isNormalizedPrecisionTolerance
 }
+
+func CosineSimilarity(a, b []float32) float32 {
+	if len(a) != len(b) {
+		return 0
+	}
+
+	var dot, normA, normB float32
+	for i, v := range a {
+		dot += v * b[i]
+		normA += v * v
+		normB += b[i] * b[i]
+	}
+
+	if normA == 0 || normB == 0 {
+		return 0
+	}
+	return dot / float32(math.Sqrt(float64(normA*normB)))
+}
+
+// FastCosineSimilarity assumes that both a and b are unit vectors.
+// For normalized vectors, cosine similarity reduces to their dot product.
+func FastCosineSimilarity(a, b []float32) float32 {
+	if len(a) != len(b) {
+		return 0
+	}
+	var dot float32
+	for i, v := range a {
+		dot += v * b[i]
+	}
+	return dot
+}

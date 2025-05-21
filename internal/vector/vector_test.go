@@ -62,3 +62,41 @@ func TestIsNormalized(t *testing.T) {
 	outOfTol := []float32{(1 + 2*float32(isNormalizedPrecisionTolerance)), 0}
 	assert.False(t, IsNormalized(outOfTol))
 }
+
+func TestCosineSimilarity(t *testing.T) {
+	// identical vectors -> similarity 1
+	a := []float32{1, 0, -1}
+	b := []float32{1, 0, -1}
+	assert.InDelta(t, 1.0, float64(CosineSimilarity(a, b)), 1e-6)
+
+	// orthogonal vectors -> similarity 0
+	a = []float32{1, 0}
+	b = []float32{0, 1}
+	assert.InDelta(t, 0.0, float64(CosineSimilarity(a, b)), 1e-6)
+
+	// length mismatch -> 0
+	aShort := []float32{1, 2}
+	bLong := []float32{1, 2, 3}
+	assert.Equal(t, float32(0), CosineSimilarity(aShort, bLong))
+
+	// zero vector -> 0
+	zero := []float32{0, 0, 0}
+	assert.Equal(t, float32(0), CosineSimilarity(a, zero))
+}
+
+// TestFastCosineSimilarity tests the fast cosine similarity assuming normalized inputs.
+func TestFastCosineSimilarity(t *testing.T) {
+	// normalized identical vectors -> 1
+	a := []float32{1, 0}
+	b := []float32{1, 0}
+	assert.Equal(t, float32(1), FastCosineSimilarity(a, b))
+
+	// normalized orthogonal vectors -> 0
+	a = Normalize([]float32{1, 1})
+	b = Normalize([]float32{1, -1})
+	assert.InDelta(t, 0.0, float64(FastCosineSimilarity(a, b)), 1e-6)
+
+	// length mismatch -> 0
+	aShort := []float32{1}
+	assert.Equal(t, float32(0), FastCosineSimilarity(aShort, b))
+}
