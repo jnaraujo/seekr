@@ -93,9 +93,7 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 		er.Embedding[0] = vector.Normalize(er.Embedding[0])
 	}
 
-	slog.Info("embedding request duration", "duration_ms", er.TotalDuration/int(time.Millisecond))
-	slog.Info("embedding request load duration", "duration", er.LoadDuration/int(time.Millisecond))
-	slog.Info("embedding request eval count", "count", er.PromptEvalCount)
+	slog.Info("embedding request", "duration_ms", er.TotalDuration/int(time.Millisecond))
 
 	return er.Embedding[0], nil
 }
