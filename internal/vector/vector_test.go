@@ -2,9 +2,25 @@ package vector
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+)
+
+func generateRandomVector(size int) []float32 {
+	vec := make([]float32, size)
+	for i := range vec {
+		vec[i] = rand.Float32()
+	}
+	return vec
+}
+
+var (
+	vecA100  = generateRandomVector(100)
+	vecB100  = generateRandomVector(100)
+	vecA1000 = generateRandomVector(1000)
+	vecB1000 = generateRandomVector(1000)
 )
 
 func TestDotProduct(t *testing.T) {
@@ -99,4 +115,28 @@ func TestFastCosineSimilarity(t *testing.T) {
 	// length mismatch -> 0
 	aShort := []float32{1}
 	assert.Equal(t, float32(0), FastCosineSimilarity(aShort, b))
+}
+
+func BenchmarkCosineSimilarity_100(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CosineSimilarity(vecA100, vecB100)
+	}
+}
+
+func BenchmarkFastCosineSimilarity_100(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		FastCosineSimilarity(vecA100, vecB100)
+	}
+}
+
+func BenchmarkCosineSimilarity_1000(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CosineSimilarity(vecA1000, vecB1000)
+	}
+}
+
+func BenchmarkFastCosineSimilarity_1000(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		FastCosineSimilarity(vecA1000, vecB1000)
+	}
 }
