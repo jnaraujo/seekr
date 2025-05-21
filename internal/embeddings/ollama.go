@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/jnaraujo/seekr/internal/vector"
 )
 
 type OllamaProvider struct {
@@ -84,6 +86,11 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 
 	if len(er.Embedding) == 0 {
 		return nil, errors.New("no embeddings returned")
+	}
+
+	if !vector.IsNormalized(er.Embedding[0]) {
+		slog.Info("embedding not normalized, normalizing")
+		er.Embedding[0] = vector.Normalize(er.Embedding[0])
 	}
 
 	slog.Info("embedding request duration", "duration_ms", er.TotalDuration/int(time.Millisecond))
