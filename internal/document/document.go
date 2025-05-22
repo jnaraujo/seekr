@@ -16,14 +16,13 @@ type Chunk struct {
 
 type Document struct {
 	ID        string
-	Metadata  Metadata
 	Chunks    []Chunk
 	Content   string
 	CreatedAt time.Time
 	Path      string
 }
 
-func NewDocument(id string, metadata Metadata, chunks []Chunk, content string, createdAt time.Time, path string) (Document, error) {
+func NewDocument(id string, chunks []Chunk, content string, createdAt time.Time, path string) (Document, error) {
 	if id == "" {
 		return Document{}, errors.New("id is empty")
 	}
@@ -40,7 +39,6 @@ func NewDocument(id string, metadata Metadata, chunks []Chunk, content string, c
 
 	return Document{
 		ID:        id,
-		Metadata:  metadata,
 		Chunks:    normalizedChunks,
 		Content:   content,
 		CreatedAt: createdAt,
