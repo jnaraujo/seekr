@@ -10,8 +10,9 @@ import (
 var ErrNotFound = errors.New("document not found")
 
 type SearchResult struct {
-	Document document.Document
-	Score    float32
+	Document          document.Document
+	Score             float32
+	BestMatchingChunk int
 }
 
 type Store interface {
