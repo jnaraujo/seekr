@@ -20,9 +20,10 @@ type Document struct {
 	Chunks    []Chunk
 	Content   string
 	CreatedAt time.Time
+	Path      string
 }
 
-func NewDocument(id string, metadata Metadata, chunks []Chunk, content string, createdAt time.Time) (Document, error) {
+func NewDocument(id string, metadata Metadata, chunks []Chunk, content string, createdAt time.Time, path string) (Document, error) {
 	if id == "" {
 		return Document{}, errors.New("id is empty")
 	}

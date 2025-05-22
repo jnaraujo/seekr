@@ -33,7 +33,7 @@ func TestIndexAndGet(t *testing.T) {
 	doc, err := document.NewDocument("doc1", nil, []document.Chunk{{
 		Embedding: []float32{1, 0},
 		Block:     "empty",
-	}}, "empty", time.Now())
+	}}, "empty", time.Now(), "path/example")
 	assert.NoError(t, err)
 
 	err = ds.Index(ctx, doc)
@@ -62,7 +62,7 @@ func TestSearchOrdering(t *testing.T) {
 			Embedding: []float32{1.0, 0.0},
 			Block:     "block2",
 		},
-	}, "", time.Now())
+	}, "", time.Now(), "path/example")
 	d2, _ := document.NewDocument("b", nil, []document.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
@@ -72,7 +72,7 @@ func TestSearchOrdering(t *testing.T) {
 			Embedding: []float32{0.1, 1.0},
 			Block:     "block2",
 		},
-	}, "", time.Now())
+	}, "", time.Now(), "path/example")
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -113,7 +113,7 @@ func TestList(t *testing.T) {
 			Embedding: []float32{1.0, 0.0},
 			Block:     "block2",
 		},
-	}, "", time.Now())
+	}, "", time.Now(), "path/example")
 	d2, _ := document.NewDocument("b", nil, []document.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
@@ -123,7 +123,7 @@ func TestList(t *testing.T) {
 			Embedding: []float32{0.1, 1.0},
 			Block:     "block2",
 		},
-	}, "", time.Now())
+	}, "", time.Now(), "path/example")
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -146,7 +146,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 		doc, _ := document.NewDocument("persist", nil, []document.Chunk{{
 			Embedding: []float32{0.5, 0.5},
 			Block:     "This is a test chunk",
-		}}, "content", time.Now())
+		}}, "content", time.Now(), "path/example")
 		assert.NoError(t, ds.Index(context.Background(), doc))
 	}
 
