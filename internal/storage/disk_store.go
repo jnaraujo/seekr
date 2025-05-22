@@ -132,3 +132,7 @@ func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, err
 
 	return document.Document{}, ErrNotFound
 }
+
+func (ds *DiskStore) List(ctx context.Context) ([]document.Document, error) {
+	return ds.documents, nil
+}

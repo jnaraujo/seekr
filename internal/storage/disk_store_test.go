@@ -98,6 +98,41 @@ func TestSearchEmpty(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
+func TestList(t *testing.T) {
+	ds, cleanup := makeTempStore(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	d1, _ := document.NewDocument("a", nil, []document.Chunk{
+		{
+			Embedding: []float32{0.5, 0.5},
+			Block:     "block1",
+		},
+		{
+			Embedding: []float32{1.0, 0.0},
+			Block:     "block2",
+		},
+	}, "")
+	d2, _ := document.NewDocument("b", nil, []document.Chunk{
+		{
+			Embedding: []float32{1.0, 0.0},
+			Block:     "block1",
+		},
+		{
+			Embedding: []float32{0.1, 1.0},
+			Block:     "block2",
+		},
+	}, "")
+
+	assert.NoError(t, ds.Index(ctx, d1))
+	assert.NoError(t, ds.Index(ctx, d2))
+
+	res, err := ds.List(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, len(res), 2)
+	assert.Equal(t, res, []document.Document{d1, d2})
+}
+
 func TestPersistenceAcrossLoads(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "store.jsonl")

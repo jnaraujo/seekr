@@ -22,4 +22,6 @@ type Store interface {
 	Search(ctx context.Context, query []float32, topK int) ([]SearchResult, error)
 	// Get retrieves a stored embedding and metadata by document ID.
 	Get(ctx context.Context, id string) (document.Document, error)
+	// Returns a list of all stored documents.
+	List(ctx context.Context) ([]document.Document, error)
 }
