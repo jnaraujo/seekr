@@ -8,8 +8,9 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all available documents stored in the system.",
+	Use:     "list",
+	Short:   "List all available documents stored in the system.",
+	Aliases: []string{"ls"},
 	Run: func(cmd *cobra.Command, args []string) {
 		docs, err := store.List(cmd.Context())
 		if err != nil {
@@ -21,9 +22,9 @@ var listCmd = &cobra.Command{
 			fmt.Println("No documents found.")
 			return
 		}
-		fmt.Printf("Found %d documents:\n", len(docs))
-		fmt.Println("ID - Content")
-		fmt.Println("---- --------")
+		fmt.Printf("Found %d document(s)\n\n", len(docs))
+		fmt.Println("# - Content - Path")
+		fmt.Println("-------------------")
 
 		maxDigits := countDigits(len(docs))
 		for index, doc := range docs {
@@ -33,7 +34,7 @@ var listCmd = &cobra.Command{
 			} else {
 				title = doc.Content
 			}
-			fmt.Printf("%0*d - %s\n", index, maxDigits, title)
+			fmt.Printf("%0*d - %s - %s\n", index, maxDigits, title, doc.Path)
 		}
 	},
 }
