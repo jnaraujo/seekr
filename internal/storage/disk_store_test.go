@@ -174,23 +174,6 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 	}
 }
 
-func TestHasPath(t *testing.T) {
-	ds, cleanup := makeTempStore(t)
-	defer cleanup()
-
-	ctx := context.Background()
-	doc, err := document.NewDocument("doc1", []embeddings.Chunk{{
-		Embedding: []float32{1, 0},
-		Block:     "empty",
-	}}, "empty", time.Now(), "path/example")
-	assert.NoError(t, err)
-
-	err = ds.Index(ctx, doc)
-	assert.NoError(t, err)
-
-	assert.True(t, ds.HasPath(ctx, "path/example"))
-}
-
 func splitLines(b []byte) [][]byte {
 	var lines [][]byte
 	start := 0

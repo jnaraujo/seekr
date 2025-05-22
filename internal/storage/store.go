@@ -25,8 +25,6 @@ type Store interface {
 	// Returns a list of all stored documents.
 	List(ctx context.Context) ([]document.Document, error)
 
-	HasPath(ctx context.Context, path string) bool
-
 	// Closes the store
 	Close() error
 }

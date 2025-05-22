@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,9 +47,11 @@ var indexCmd = &cobra.Command{
 			return
 		}
 
-		if store.HasPath(cmd.Context(), inputPath) {
-			fmt.Printf("document %q is already indexed\n", inputPath)
-			return
+		if _, err := store.Get(cmd.Context(), id.HashPath(inputPath)); err == nil {
+			if !errors.Is(err, storage.ErrNotFound) {
+				fmt.Printf("document %q is already indexed\n", inputPath)
+				return
+			}
 		}
 
 		fmt.Printf("Indexing document %q...\n", inputPath)
@@ -58,7 +61,7 @@ var indexCmd = &cobra.Command{
 			return
 		}
 
-		doc, err := document.NewDocument(id.NewID(), chunks, content, time.Now(), inputPath)
+		doc, err := document.NewDocument(id.HashPath(inputPath), chunks, content, time.Now(), inputPath)
 		if err != nil {
 			fmt.Printf("failed to create document %q: %v\n", inputPath, err)
 			return

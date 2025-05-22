@@ -2,6 +2,8 @@ package id
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"math/big"
 )
 
@@ -16,4 +18,9 @@ func NewID() string {
 	}
 
 	return string(ret)
+}
+
+func HashPath(path string) string {
+	hash := sha256.Sum256([]byte(path))
+	return hex.EncodeToString(hash[:])
 }

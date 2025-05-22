@@ -135,19 +135,6 @@ func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, err
 	return document.Document{}, ErrNotFound
 }
 
-func (ds *DiskStore) HasPath(ctx context.Context, path string) bool {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-
-	for _, doc := range ds.documents {
-		if doc.Path == path {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (ds *DiskStore) List(ctx context.Context) ([]document.Document, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
