@@ -19,7 +19,7 @@ func makeTempStore(t *testing.T) (*DiskStore, func()) {
 	assert.NoError(t, err)
 
 	return ds, func() {
-		ds.file.Close()
+		ds.Close()
 		os.Remove(file)
 	}
 }
@@ -140,7 +140,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 	{ // first load
 		ds, err := NewDiskStore(file)
 		assert.NoError(t, err)
-		defer ds.file.Close()
+		defer ds.Close()
 
 		doc, _ := document.NewDocument("persist", nil, []document.Chunk{{
 			Embedding: []float32{0.5, 0.5},
@@ -152,7 +152,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 	{ // second load
 		ds2, err := NewDiskStore(file)
 		assert.NoError(t, err)
-		defer ds2.file.Close()
+		defer ds2.Close()
 
 		got, err := ds2.Get(context.Background(), "persist")
 		assert.NoError(t, err)

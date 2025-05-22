@@ -134,5 +134,14 @@ func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, err
 }
 
 func (ds *DiskStore) List(ctx context.Context) ([]document.Document, error) {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
 	return ds.documents, nil
+}
+
+func (ds *DiskStore) Close() error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	return ds.file.Close()
 }
