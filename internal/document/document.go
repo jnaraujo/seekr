@@ -2,6 +2,7 @@ package document
 
 import (
 	"errors"
+	"time"
 
 	"github.com/jnaraujo/seekr/internal/vector"
 )
@@ -14,15 +15,20 @@ type Chunk struct {
 }
 
 type Document struct {
-	ID       string
-	Metadata Metadata
-	Chunks   []Chunk
-	Content  string
+	ID        string
+	Metadata  Metadata
+	Chunks    []Chunk
+	Content   string
+	CreatedAt time.Time
 }
 
-func NewDocument(id string, metadata Metadata, chunks []Chunk, content string) (Document, error) {
+func NewDocument(id string, metadata Metadata, chunks []Chunk, content string, createdAt time.Time) (Document, error) {
 	if id == "" {
 		return Document{}, errors.New("id is empty")
+	}
+
+	if createdAt.IsZero() {
+		createdAt = time.Now()
 	}
 
 	normalizedChunks := make([]Chunk, len(chunks))
@@ -32,9 +38,10 @@ func NewDocument(id string, metadata Metadata, chunks []Chunk, content string) (
 	}
 
 	return Document{
-		ID:       id,
-		Metadata: metadata,
-		Chunks:   normalizedChunks,
-		Content:  content,
+		ID:        id,
+		Metadata:  metadata,
+		Chunks:    normalizedChunks,
+		Content:   content,
+		CreatedAt: createdAt,
 	}, nil
 }

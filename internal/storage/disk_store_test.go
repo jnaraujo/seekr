@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jnaraujo/seekr/internal/document"
 	"github.com/jnaraujo/seekr/internal/vector"
@@ -32,7 +33,7 @@ func TestIndexAndGet(t *testing.T) {
 	doc, err := document.NewDocument("doc1", nil, []document.Chunk{{
 		Embedding: []float32{1, 0},
 		Block:     "empty",
-	}}, "empty")
+	}}, "empty", time.Now())
 	assert.NoError(t, err)
 
 	err = ds.Index(ctx, doc)
@@ -61,7 +62,7 @@ func TestSearchOrdering(t *testing.T) {
 			Embedding: []float32{1.0, 0.0},
 			Block:     "block2",
 		},
-	}, "")
+	}, "", time.Now())
 	d2, _ := document.NewDocument("b", nil, []document.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
@@ -71,7 +72,7 @@ func TestSearchOrdering(t *testing.T) {
 			Embedding: []float32{0.1, 1.0},
 			Block:     "block2",
 		},
-	}, "")
+	}, "", time.Now())
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -112,7 +113,7 @@ func TestList(t *testing.T) {
 			Embedding: []float32{1.0, 0.0},
 			Block:     "block2",
 		},
-	}, "")
+	}, "", time.Now())
 	d2, _ := document.NewDocument("b", nil, []document.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
@@ -122,7 +123,7 @@ func TestList(t *testing.T) {
 			Embedding: []float32{0.1, 1.0},
 			Block:     "block2",
 		},
-	}, "")
+	}, "", time.Now())
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -145,7 +146,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 		doc, _ := document.NewDocument("persist", nil, []document.Chunk{{
 			Embedding: []float32{0.5, 0.5},
 			Block:     "This is a test chunk",
-		}}, "content")
+		}}, "content", time.Now())
 		assert.NoError(t, ds.Index(context.Background(), doc))
 	}
 
