@@ -5,8 +5,11 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"sync"
 
@@ -64,11 +67,9 @@ func (ds *DiskStore) Index(ctx context.Context, document document.Document) erro
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	for i, e := range ds.documents {
-		if e.ID == document.ID {
-			ds.documents = slices.Delete(ds.documents, i, i+1)
-			break
-		}
+	_, err := ds.getInternal(ctx, document.ID)
+	if !errors.Is(err, ErrNotFound) {
+		return err
 	}
 
 	ds.documents = append(ds.documents, document)
@@ -82,6 +83,89 @@ func (ds *DiskStore) Index(ctx context.Context, document document.Document) erro
 	}
 	// Ensure write is flushed to disk
 	return ds.file.Sync()
+}
+
+func (ds *DiskStore) Remove(ctx context.Context, id string) error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	foundIndex := -1
+	for i, e := range ds.documents {
+		if e.ID == id {
+			foundIndex = i
+			break
+		}
+	}
+
+	if foundIndex == -1 {
+		return ErrNotFound
+	}
+
+	tempFileDir := filepath.Dir(ds.filePath)
+	tempFile, err := os.CreateTemp(tempFileDir, filepath.Base(ds.filePath)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("Remove: failed to create temporary file: %w", err)
+	}
+
+	tempFilePath := tempFile.Name()
+	operationSuccessful := false
+	defer func() {
+		tempFile.Close()
+		if !operationSuccessful {
+			os.Remove(tempFilePath)
+		}
+	}()
+
+	writer := bufio.NewWriter(tempFile)
+	for i, doc := range ds.documents {
+		if i == foundIndex {
+			continue
+		}
+		line, err := json.Marshal(doc)
+		if err != nil {
+			return fmt.Errorf("remove: failed to marshal document ID %s: %w", doc.ID, err)
+		}
+		if _, writeErr := writer.Write(append(line, '\n')); writeErr != nil {
+			return fmt.Errorf("remove: failed to write document ID %s to temporary file: %w", doc.ID, writeErr)
+		}
+	}
+
+	if err := writer.Flush(); err != nil {
+		return err
+	}
+
+	if err = tempFile.Sync(); err != nil {
+		return fmt.Errorf("remove: failed to sync temporary file: %w", err)
+	}
+
+	if err = tempFile.Close(); err != nil {
+		return fmt.Errorf("remove: failed to close temporary file: %w", err)
+	}
+
+	if err = ds.file.Close(); err != nil {
+		return fmt.Errorf("remove: failed to close main data file (%s): %w "+
+			"Temporary data not applied", ds.filePath, err)
+	}
+
+	if err = os.Rename(tempFilePath, ds.filePath); err != nil {
+		currentFile, err := os.OpenFile(ds.filePath, os.O_CREATE|os.O_RDWR, 0o644)
+		if err == nil {
+			ds.file = currentFile
+		}
+		return fmt.Errorf("remove: CRITICAL - failed to rename temporary file from %s to %s: %w. "+
+			"The new data *might* still be in %s (check cleanup logic). Original file state: %s",
+			tempFilePath, ds.filePath, err, tempFilePath, ds.filePath)
+	}
+
+	newFile, err := os.OpenFile(ds.filePath, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return fmt.Errorf("remove: CRITICAL - data file %s updated successfully on disk, but failed to reopen: %w. "+
+			"DiskStore's file handle is invalid. In-memory document list is OUT OF SYNC with disk", ds.filePath, err)
+	}
+	ds.file = newFile
+	ds.documents = slices.Delete(ds.documents, foundIndex, foundIndex+1)
+	operationSuccessful = true
+	return nil
 }
 
 func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]SearchResult, error) {
@@ -126,6 +210,10 @@ func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, err
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
+	return ds.getInternal(ctx, id)
+}
+
+func (ds *DiskStore) getInternal(_ context.Context, id string) (document.Document, error) {
 	for _, doc := range ds.documents {
 		if doc.ID == id {
 			return doc, nil

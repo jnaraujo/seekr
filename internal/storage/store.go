@@ -24,6 +24,7 @@ type Store interface {
 	Get(ctx context.Context, id string) (document.Document, error)
 	// Returns a list of all stored documents.
 	List(ctx context.Context) ([]document.Document, error)
+	Remove(ctx context.Context, id string) error
 
 	// Closes the store
 	Close() error

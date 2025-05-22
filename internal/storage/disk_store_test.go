@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -174,6 +175,40 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 	}
 }
 
+func TestRemove(t *testing.T) {
+	doc1 := document.Document{ID: "id1", Content: "data1"}
+	doc2 := document.Document{ID: "id2", Content: "data2"}
+	doc3 := document.Document{ID: "id3", Content: "data3"}
+	docs := createDocumentsOnDisk(t, []document.Document{doc1, doc2, doc3})
+
+	dir := t.TempDir()
+	file := filepath.Join(dir, "store.jsonl")
+
+	{ // first load
+		ds, err := NewDiskStore(file)
+		assert.NoError(t, err)
+		defer ds.Close()
+
+		for _, doc := range docs {
+			assert.NoError(t, ds.Index(context.Background(), doc))
+		}
+		assert.NoError(t, ds.Remove(context.Background(), "id2"))
+	}
+
+	{ // second load
+		ds2, err := NewDiskStore(file)
+		assert.NoError(t, err)
+		defer ds2.Close()
+
+		foundDocs, err := ds2.List(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(foundDocs))
+
+		_, err = ds2.Get(context.Background(), "id2")
+		assert.ErrorIs(t, ErrNotFound, err)
+	}
+}
+
 func splitLines(b []byte) [][]byte {
 	var lines [][]byte
 	start := 0
@@ -187,4 +222,19 @@ func splitLines(b []byte) [][]byte {
 		lines = append(lines, b[start:])
 	}
 	return lines
+}
+
+func createDocumentsOnDisk(t *testing.T, initialDocs []document.Document) []document.Document {
+	t.Helper()
+
+	tempDir := t.TempDir()
+
+	docs := make([]document.Document, 0, len(initialDocs))
+	for i, doc := range initialDocs {
+		tempFilePath := filepath.Join(tempDir, fmt.Sprintf("test_data_%d.txt", i))
+		doc.Path = tempFilePath
+		docs = append(docs, doc)
+	}
+
+	return docs
 }
