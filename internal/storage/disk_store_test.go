@@ -29,7 +29,7 @@ func TestIndexAndGet(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	doc, err := document.NewDocument("doc1", nil, []float32{1.0, 0.0}, "empty")
+	doc, err := document.NewDocument("doc1", nil, [][]float32{{1.0, 0.0}}, "empty")
 	assert.NoError(t, err)
 
 	err = ds.Index(ctx, doc)
@@ -49,8 +49,8 @@ func TestSearchOrdering(t *testing.T) {
 
 	ctx := context.Background()
 
-	d1, _ := document.NewDocument("a", nil, []float32{1.0, 0.0}, "")
-	d2, _ := document.NewDocument("b", nil, []float32{0.0, 1.0}, "")
+	d1, _ := document.NewDocument("a", nil, [][]float32{{1.0, 0.0}}, "")
+	d2, _ := document.NewDocument("b", nil, [][]float32{{0.0, 1.0}}, "")
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -62,7 +62,7 @@ func TestSearchOrdering(t *testing.T) {
 	assert.Len(t, results, 2)
 
 	assert.Equal(t, "b", results[0].Document.ID)
-	assert.True(t, vector.CosineSimilarity(query, d2.Embedding) >= results[1].Score)
+	assert.True(t, vector.CosineSimilarity(query, d2.Embeddings[0]) >= results[1].Score)
 }
 
 func TestSearchEmpty(t *testing.T) {
@@ -83,7 +83,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 		assert.NoError(t, err)
 		defer ds.file.Close()
 
-		doc, _ := document.NewDocument("persist", nil, []float32{0.5, 0.5}, "content")
+		doc, _ := document.NewDocument("persist", nil, [][]float32{{0.5, 0.5}}, "content")
 		assert.NoError(t, ds.Index(context.Background(), doc))
 	}
 

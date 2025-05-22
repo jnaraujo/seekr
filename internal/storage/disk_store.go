@@ -94,10 +94,19 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 
 	results := make([]SearchResult, 0, len(ds.documents))
 	for _, doc := range ds.documents {
-		score := vector.CosineSimilarity(query, doc.Embedding)
+		var bestScore float32
+		for _, emb := range doc.Embeddings {
+			score := vector.CosineSimilarity(query, emb)
+			if score > bestScore {
+				bestScore = score
+			}
+		}
+		if bestScore <= 0 {
+			continue
+		}
 		results = append(results, SearchResult{
 			Document: doc,
-			Score:    score,
+			Score:    bestScore,
 		})
 	}
 
