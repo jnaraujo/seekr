@@ -48,6 +48,8 @@ func (s *DiskStore) load() error {
 
 	s.documents = s.documents[:0]
 	scanner := bufio.NewScanner(s.file)
+	buf := make([]byte, 0, 64*1024) // 64KB buffer
+	scanner.Buffer(buf, 1024*1024)  // 1MB max line size
 	for scanner.Scan() {
 		var doc document.Document
 		if err := json.Unmarshal(scanner.Bytes(), &doc); err != nil {
@@ -131,6 +133,19 @@ func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, err
 	}
 
 	return document.Document{}, ErrNotFound
+}
+
+func (ds *DiskStore) HasPath(ctx context.Context, path string) bool {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+
+	for _, doc := range ds.documents {
+		if doc.Path == path {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (ds *DiskStore) List(ctx context.Context) ([]document.Document, error) {

@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/jnaraujo/seekr/internal/config"
+	"github.com/jnaraujo/seekr/internal/embeddings"
 	"github.com/jnaraujo/seekr/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var startTime = time.Now()
 var store storage.Store
+var embedding embeddings.Provider
 
 var rootCmd = &cobra.Command{
 	Use:   "seekr",
@@ -29,6 +31,8 @@ Learn more at https://github.com/jnaraujo/seekr
 }
 
 func Execute() {
+	embedding = embeddings.NewOllamaProvider(config.DefaultEmbeddingModel, "")
+
 	storePath, err := storage.DefaultStorePath()
 	if err != nil {
 		fmt.Println("Error getting default store path:", err)

@@ -58,7 +58,7 @@ var splitter = textsplitter.NewRecursiveCharacterTextSplitter(config.MaxChunkCha
 
 func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]Chunk, error) {
 	blocks := splitter.SplitText(text)
-	chunks := make([]Chunk, len(blocks))
+	chunks := make([]Chunk, 0, len(blocks))
 	for _, block := range blocks {
 		emb, err := p.embedBlock(ctx, block)
 		if err != nil {
@@ -104,18 +104,20 @@ func (p *OllamaProvider) embedBlock(ctx context.Context, text string) ([]float32
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if len(er.Embedding) == 0 {
+	embedding := er.Embedding[0]
+
+	if len(embedding) == 0 {
 		return nil, errors.New("no embeddings returned")
 	}
 
-	if len(er.Embedding) != config.EmbeddingDimension {
+	if len(embedding) != config.EmbeddingDimension {
 		return nil, fmt.Errorf("expected %d dimensions, got %d", config.EmbeddingDimension, len(er.Embedding))
 	}
 
-	if !vector.IsNormalized(er.Embedding[0]) {
+	if !vector.IsNormalized(embedding) {
 		slog.Info("embedding not normalized, normalizing")
-		er.Embedding[0] = vector.Normalize(er.Embedding[0])
+		embedding = vector.Normalize(embedding)
 	}
 
-	return er.Embedding[0], nil
+	return embedding, nil
 }

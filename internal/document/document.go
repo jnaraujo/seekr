@@ -38,5 +38,6 @@ func NewDocument(id string, chunks []embeddings.Chunk, content string, createdAt
 		Chunks:    normalizedChunks,
 		Content:   content,
 		CreatedAt: createdAt,
+		Path:      path,
 	}, nil
 }
