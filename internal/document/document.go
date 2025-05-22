@@ -4,25 +4,21 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jnaraujo/seekr/internal/embeddings"
 	"github.com/jnaraujo/seekr/internal/vector"
 )
 
 type Metadata = map[string]string
 
-type Chunk struct {
-	Embedding []float32
-	Block     string
-}
-
 type Document struct {
 	ID        string
-	Chunks    []Chunk
+	Chunks    []embeddings.Chunk
 	Content   string
 	CreatedAt time.Time
 	Path      string
 }
 
-func NewDocument(id string, chunks []Chunk, content string, createdAt time.Time, path string) (Document, error) {
+func NewDocument(id string, chunks []embeddings.Chunk, content string, createdAt time.Time, path string) (Document, error) {
 	if id == "" {
 		return Document{}, errors.New("id is empty")
 	}
@@ -31,7 +27,7 @@ func NewDocument(id string, chunks []Chunk, content string, createdAt time.Time,
 		createdAt = time.Now()
 	}
 
-	normalizedChunks := make([]Chunk, len(chunks))
+	normalizedChunks := make([]embeddings.Chunk, len(chunks))
 	for i, chunk := range chunks {
 		chunk.Embedding = vector.Normalize(chunk.Embedding)
 		normalizedChunks[i] = chunk

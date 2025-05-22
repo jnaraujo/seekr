@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jnaraujo/seekr/internal/config"
+	"github.com/jnaraujo/seekr/internal/textsplitter"
 	"github.com/jnaraujo/seekr/internal/vector"
 )
 
@@ -28,7 +30,7 @@ func NewOllamaProvider(model, baseURL string) *OllamaProvider {
 		baseURL = defaultBaseURLOllama
 	}
 	if model == "" {
-		model = "nomic-embed-text"
+		model = config.DefaultEmbeddingModel
 	}
 
 	return &OllamaProvider{
@@ -44,7 +46,6 @@ type embedRequest struct {
 	Input string `json:"input"`
 }
 
-// embedResponse matches the JSON structure returned by the Ollama API.
 type embedResponse struct {
 	Model           string      `json:"model"`
 	Embedding       [][]float32 `json:"embeddings"`
@@ -53,7 +54,26 @@ type embedResponse struct {
 	PromptEvalCount int         `json:"prompt_eval_count"`
 }
 
-func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, error) {
+var splitter = textsplitter.NewRecursiveCharacterTextSplitter(config.MaxChunkChars, config.ChunkOverlapping)
+
+func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]Chunk, error) {
+	blocks := splitter.SplitText(text)
+	chunks := make([]Chunk, len(blocks))
+	for _, block := range blocks {
+		emb, err := p.embedBlock(ctx, block)
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, Chunk{
+			Block:     block,
+			Embedding: emb,
+		})
+	}
+
+	return chunks, nil
+}
+
+func (p *OllamaProvider) embedBlock(ctx context.Context, text string) ([]float32, error) {
 	reqBody, err := json.Marshal(embedRequest{
 		Model: p.model,
 		Input: text,
@@ -88,12 +108,14 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 		return nil, errors.New("no embeddings returned")
 	}
 
+	if len(er.Embedding) != config.EmbeddingDimension {
+		return nil, fmt.Errorf("expected %d dimensions, got %d", config.EmbeddingDimension, len(er.Embedding))
+	}
+
 	if !vector.IsNormalized(er.Embedding[0]) {
 		slog.Info("embedding not normalized, normalizing")
 		er.Embedding[0] = vector.Normalize(er.Embedding[0])
 	}
-
-	slog.Info("embedding request", "duration_ms", er.TotalDuration/int(time.Millisecond))
 
 	return er.Embedding[0], nil
 }
