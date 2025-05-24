@@ -128,7 +128,7 @@ func indexFile(ctx context.Context, path string) error {
 	}
 
 	if len(content) >= config.MaxContentChars/20 {
-		fmt.Println("the document is large, and indexing may take some time, do not interrupt the process")
+		fmt.Println("The document is large, and indexing may take some time, do not interrupt the process")
 	}
 
 	if _, err := store.Get(ctx, id.HashPath(path)); err == nil {
