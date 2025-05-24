@@ -43,7 +43,7 @@ var searchCmd = &cobra.Command{
 			}
 			fmt.Printf("(%d) %.2f%% - %s - %s\n", index+1, res.Score*100, title, res.Document.Path)
 		}
-		fmt.Printf("\nFound %d results.\n", len(results))
+		fmt.Printf("\nFound top %d results.\n", len(results))
 	},
 }
 
