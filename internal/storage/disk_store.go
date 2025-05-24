@@ -238,30 +238,3 @@ func (ds *DiskStore) Close() error {
 
 	return ds.file.Close()
 }
-
-func (ds *DiskStore) calculateDistribution(totalItems, numWorkers int) []int {
-	if numWorkers <= 0 {
-		// Handle invalid case, perhaps return nil or an error
-		// For simplicity here, we might return nil or an empty slice depending on desired behavior.
-		// Let's return nil for this example to indicate an issue.
-		return nil
-	}
-	if totalItems == 0 {
-		workloads := make([]int, numWorkers)
-		// All workers receive 0 items
-		return workloads
-	}
-
-	baseItemsPerWorker := totalItems / numWorkers
-	remainingItems := totalItems % numWorkers
-
-	workloads := make([]int, numWorkers)
-	for i := 0; i < numWorkers; i++ {
-		workloads[i] = baseItemsPerWorker
-		if remainingItems > 0 {
-			workloads[i]++
-			remainingItems--
-		}
-	}
-	return workloads
-}
