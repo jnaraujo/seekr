@@ -1,7 +1,6 @@
 package textsplitter
 
 import (
-	"log"
 	"strings"
 )
 
@@ -21,9 +20,6 @@ func (t *TextSplitter) mergeSplits(splits []string, separator string) []string {
 		splitLen := t.lengthFunction(d)
 
 		if total+splitLen+getSLen(currentDoc, separator, 0) > t.chunkSize {
-			if total > t.chunkSize {
-				log.Printf("Created a chunk of size %d, which is longer than the specified %d", total, t.chunkSize)
-			}
 			if len(currentDoc) > 0 {
 				doc := t.joinDocs(currentDoc, separator)
 				if doc != "" {
