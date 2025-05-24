@@ -168,6 +168,12 @@ func (ds *DiskStore) Remove(ctx context.Context, id string) error {
 	return nil
 }
 
+type docProcessingResult struct {
+	doc            *document.Document
+	bestScore      float32
+	bestChunkIndex int
+}
+
 func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]SearchResult, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
@@ -178,56 +184,58 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		return nil, ErrNotFound
 	}
 
+	numWorkers := 4
+
+	docChan := make(chan *document.Document, numWorkers)
+	resultsChan := make(chan docProcessingResult, len(ds.documents))
 	var wg sync.WaitGroup
-	workers := 2
 
-	dist := ds.calculateDistribution(len(ds.documents), workers)
-
-	resultsCh := make(chan []SearchResult, workers)
-
-	currentDocumentIndex := 0
-	for index, countForThisWorker := range dist {
-		wg.Add(1)
-		startIndex := currentDocumentIndex
-		endIndex := currentDocumentIndex + countForThisWorker
-
-		currentDocumentIndex = endIndex
-
-		go func(workerID, localStartIndex, localEndIndex int) {
+	wg.Add(numWorkers)
+	for range numWorkers {
+		go func() {
 			defer wg.Done()
-			docsToProcess := ds.documents[localStartIndex:localEndIndex]
-			localResults := make([]SearchResult, 0, len(docsToProcess))
 
-			for _, doc := range docsToProcess {
-				var bestScore float32
-				var bestChunkIndex = 0
-				for i, chunk := range doc.Chunks {
+			for doc := range docChan {
+				var bestScore float32 = -2.0
+				var bestChunkIndex = -1
+
+				for chunkIdx, chunk := range doc.Chunks {
 					score := vector.FastCosineSimilarity(query, chunk.Embedding)
 					if score > bestScore {
 						bestScore = score
-						bestChunkIndex = i
+						bestChunkIndex = chunkIdx
 					}
 				}
-				if bestScore <= 0 {
-					continue
+
+				if bestChunkIndex != -1 && bestScore > 0 {
+					resultsChan <- docProcessingResult{
+						doc:            doc,
+						bestScore:      bestScore,
+						bestChunkIndex: bestChunkIndex,
+					}
 				}
-				localResults = append(localResults, SearchResult{
-					Document:          doc,
-					Score:             bestScore,
-					BestMatchingChunk: bestChunkIndex,
-				})
 			}
 
-			resultsCh <- localResults
-		}(index, startIndex, endIndex)
+		}()
 	}
 
-	wg.Wait()
-	close(resultsCh)
+	for _, doc := range ds.documents {
+		docChan <- &doc
+	}
+	close(docChan)
+
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
 
 	results := make([]SearchResult, 0, len(ds.documents))
-	for workerResults := range resultsCh {
-		results = append(results, workerResults...)
+	for res := range resultsChan {
+		results = append(results, SearchResult{
+			Document:          *res.doc,
+			Score:             res.bestScore,
+			BestMatchingChunk: res.bestChunkIndex,
+		})
 	}
 
 	slices.SortFunc(results, func(a, b SearchResult) int {
