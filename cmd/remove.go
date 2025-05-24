@@ -35,7 +35,6 @@ var removeCmd = &cobra.Command{
 			}
 
 			for _, file := range files {
-				fmt.Printf("Removing document %q...\n", file)
 				err = store.Remove(cmd.Context(), id.HashPath(file))
 				if err != nil {
 					fmt.Printf("Failed to remove %q: %v\n", file, err)
@@ -46,7 +45,6 @@ var removeCmd = &cobra.Command{
 
 			fmt.Printf("Directory %q removed\n", inputPath)
 		default:
-			fmt.Printf("Removing file %q...\n", inputPath)
 			err := store.Remove(cmd.Context(), id.HashPath(inputPath))
 			if err != nil {
 				fmt.Printf("failed to remove document %q: %v\n", inputPath, err)

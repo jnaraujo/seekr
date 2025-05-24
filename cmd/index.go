@@ -43,7 +43,6 @@ var indexCmd = &cobra.Command{
 			}
 
 			for _, file := range files {
-				fmt.Printf("Indexing document %q...\n", file)
 				err = indexFile(cmd.Context(), file)
 				if err != nil {
 					fmt.Printf("Failed to index %q: %v\n", file, err)
@@ -53,7 +52,6 @@ var indexCmd = &cobra.Command{
 			}
 			fmt.Printf("Directory %q indexed.\n", inputPath)
 		case storage.FilePathKind:
-			fmt.Printf("Indexing document %q...\n", inputPath)
 			err = indexFile(cmd.Context(), inputPath)
 			if err != nil {
 				fmt.Printf("Failed to index %q: %v\n", inputPath, err)
