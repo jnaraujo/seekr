@@ -4,7 +4,7 @@ const (
 	// Application configuration
 	AppID      = "seekr"
 	AppName    = "SeekR"
-	AppVersion = 0.1
+	AppVersion = "0.1.0"
 	DBFileExt  = "skdb"
 )
 

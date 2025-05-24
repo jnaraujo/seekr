@@ -16,7 +16,7 @@ var statsCmd = &cobra.Command{
 		printAscii()
 
 		fmt.Printf("Startup: %s\n", time.Since(startTime))
-		fmt.Printf("Version: %g\n", config.AppVersion)
+		fmt.Printf("Version: %s\n", config.AppVersion)
 
 		storePath, err := storage.DefaultStorePath()
 		if err == nil {

@@ -67,7 +67,7 @@ func printAscii() {
         \/     \/     \/     \/       \/ 
 `
 	fmt.Println(art)
-	bottom := fmt.Sprintf("%s - v%g", config.AppName, config.AppVersion)
+	bottom := fmt.Sprintf("%s - v%s", config.AppName, config.AppVersion)
 	const asciiWidth = 41
 	if len(bottom) < asciiWidth {
 		padding := (asciiWidth - len(bottom)) / 2
