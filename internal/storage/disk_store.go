@@ -183,7 +183,7 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		var bestScore float32
 		var bestChunkIndex = 0
 		for i, chunk := range doc.Chunks {
-			score := vector.CosineSimilarity(query, chunk.Embedding)
+			score := vector.FastCosineSimilarity(query, chunk.Embedding)
 			if score > bestScore {
 				bestScore = score
 				bestChunkIndex = i
