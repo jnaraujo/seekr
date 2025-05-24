@@ -51,8 +51,8 @@ func (s *DiskStore) load() error {
 
 	s.documents = s.documents[:0]
 	scanner := bufio.NewScanner(s.file)
-	buf := make([]byte, 0, 64*1024) // 64KB buffer
-	scanner.Buffer(buf, 1024*1024)  // 1MB max line size
+	buf := make([]byte, 0, 1024*1024)
+	scanner.Buffer(buf, 50*1024*1024)
 	for scanner.Scan() {
 		var doc document.Document
 		if err := json.Unmarshal(scanner.Bytes(), &doc); err != nil {
