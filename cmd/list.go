@@ -23,7 +23,7 @@ var listCmd = &cobra.Command{
 			return
 		}
 		fmt.Printf("Found %d document(s)\n\n", len(docs))
-		fmt.Println("# - Content - Path")
+		fmt.Println("(#) Content - Path")
 		fmt.Println("-------------------")
 
 		maxDigits := countDigits(len(docs))
@@ -34,7 +34,7 @@ var listCmd = &cobra.Command{
 			} else {
 				title = doc.Content
 			}
-			fmt.Printf("%0*d - %s - %s\n", index, maxDigits, title, doc.Path)
+			fmt.Printf("(%0*d) %s - %s\n", maxDigits, index, title, doc.Path)
 		}
 	},
 }
