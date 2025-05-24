@@ -28,16 +28,25 @@ func EnsureStorePath(path string) error {
 	return os.MkdirAll(dir, 0o755)
 }
 
-func CheckFile(path string) error {
-	info, err := os.Stat(path)
+type PathKind int
+
+const (
+	InvalidPathKind PathKind = iota
+	DirectoryPathKind
+	FilePathKind
+)
+
+func CheckPath(path string) (PathKind, error) {
+	fi, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("file %q not found", path)
+			return InvalidPathKind, fmt.Errorf("path %q not found", path)
 		}
-		return fmt.Errorf("unable to check file %q: %w", path, err)
+		return InvalidPathKind, fmt.Errorf("unable to check path %q: %w", path, err)
 	}
-	if info.IsDir() {
-		return fmt.Errorf("%q is a directory, expected a file", path)
+
+	if fi.IsDir() {
+		return DirectoryPathKind, nil
 	}
-	return nil
+	return FilePathKind, nil
 }

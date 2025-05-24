@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -20,68 +21,102 @@ var indexCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		inputPath := args[0]
-		if err := storage.CheckFile(inputPath); err != nil {
+		pathKind, err := storage.CheckPath(inputPath)
+		if err != nil {
 			fmt.Printf("failed to index document %q: %v\n", inputPath, err)
 			return
 		}
 
-		inputPath, err := filepath.Abs(inputPath)
+		inputPath, err = filepath.Abs(inputPath)
 		if err != nil {
 			fmt.Printf("failed to get absolute path for %q: %v\n", inputPath, err)
 			return
 		}
 
-		contentBytes, err := os.ReadFile(inputPath)
-		if err != nil {
-			fmt.Printf("failed to read document %q: %v\n", inputPath, err)
-			return
-		}
-
-		content := string(contentBytes)
-		if len(content) == 0 {
-			fmt.Printf("document %q is empty\n", inputPath)
-			return
-		}
-		if len(content) > config.MaxContent {
-			fmt.Printf("document %q is too large (%d bytes)\n", inputPath, len(content))
-			return
-		}
-
-		if _, err := store.Get(cmd.Context(), id.HashPath(inputPath)); err == nil {
-			if !errors.Is(err, storage.ErrNotFound) {
-				fmt.Printf("document %q is already indexed\n", inputPath)
+		switch pathKind {
+		case storage.DirectoryPathKind:
+			fmt.Printf("Indexing directory %q...\n", inputPath)
+			files, err := filePathWalkDir(inputPath)
+			if err != nil {
+				fmt.Printf("Failed to index directory %q: %v\n", inputPath, err)
 				return
 			}
-		}
 
-		fmt.Printf("Indexing document %q...\n", inputPath)
-		chunks, err := embedding.Embed(cmd.Context(), content)
-		if err != nil {
-			fmt.Printf("failed to generate document embeddings %q: %v\n", inputPath, err)
+			for _, file := range files {
+				fmt.Printf("Indexing document %q...\n", file)
+				err = indexFile(cmd.Context(), file)
+				if err != nil {
+					fmt.Printf("Failed to index %q: %v\n", file, err)
+					continue
+				}
+				fmt.Printf("Document %q indexed successfully!\n", file)
+			}
+			fmt.Printf("Directory %q indexed.\n", inputPath)
+		case storage.FilePathKind:
+			fmt.Printf("Indexing document %q...\n", inputPath)
+			err = indexFile(cmd.Context(), inputPath)
+			if err != nil {
+				fmt.Printf("Failed to index %q: %v\n", inputPath, err)
+				return
+			}
+			fmt.Printf("Document %q indexed successfully!\n", inputPath)
+		default:
+			fmt.Printf("Failed to index document %q\n", inputPath)
 			return
 		}
 
-		doc, err := document.NewDocument(id.HashPath(inputPath), chunks, content, time.Now(), inputPath)
-		if err != nil {
-			fmt.Printf("failed to create document %q: %v\n", inputPath, err)
-			return
-		}
-
-		err = store.Index(cmd.Context(), doc)
-		if err != nil {
-			fmt.Printf("failed to index document %q: %v\n", inputPath, err)
-			return
-		}
-
-		fmt.Printf("Document %q indexed successfully!\n", inputPath)
-		fmt.Printf("Document ID: %s\n", doc.ID)
-		fmt.Printf("Document Size: %d bytes\n", len(contentBytes))
-		fmt.Printf("Document Path: %s\n", doc.Path)
-		fmt.Printf("Document Created At: %s\n", doc.CreatedAt.Format(time.RFC3339))
-		fmt.Printf("Document Chunk Size: %d\n", len(doc.Chunks))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(indexCmd)
+}
+
+func indexFile(ctx context.Context, path string) error {
+	contentBytes, err := os.ReadFile(path)
+	if err != nil {
+		return errors.New("failed to read document")
+	}
+
+	content := string(contentBytes)
+	if len(content) == 0 {
+		return errors.New("document is empty")
+	}
+	if len(content) > config.MaxContent {
+		return errors.New("document is too large")
+	}
+
+	if _, err := store.Get(ctx, id.HashPath(path)); err == nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			return errors.New("document is already indexed")
+		}
+	}
+
+	chunks, err := embedding.Embed(ctx, content)
+	if err != nil {
+		return errors.New("failed to generate document embeddings")
+	}
+
+	doc, err := document.NewDocument(id.HashPath(path), chunks, content, time.Now(), path)
+	if err != nil {
+		return errors.New("failed to create document ")
+	}
+
+	err = store.Index(ctx, doc)
+	if err != nil {
+		return errors.New("failed to index document")
+	}
+
+	return nil
+}
+
+func filePathWalkDir(root string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
 }
