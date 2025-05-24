@@ -178,25 +178,57 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		return nil, ErrNotFound
 	}
 
-	results := make([]SearchResult, 0, len(ds.documents))
-	for _, doc := range ds.documents {
-		var bestScore float32
-		var bestChunkIndex = 0
-		for i, chunk := range doc.Chunks {
-			score := vector.FastCosineSimilarity(query, chunk.Embedding)
-			if score > bestScore {
-				bestScore = score
-				bestChunkIndex = i
+	var wg sync.WaitGroup
+	workers := 2
+
+	dist := ds.calculateDistribution(len(ds.documents), workers)
+
+	allWorkerResults := make([][]SearchResult, workers)
+
+	currentDocumentIndex := 0
+	for index, countForThisWorker := range dist {
+		wg.Add(1)
+		startIndex := currentDocumentIndex
+		endIndex := currentDocumentIndex + countForThisWorker
+
+		currentDocumentIndex = endIndex
+
+		go func(workerID, localStartIndex, localEndIndex int) {
+			defer wg.Done()
+			docsToProcess := ds.documents[localStartIndex:localEndIndex]
+			localResults := make([]SearchResult, 0, len(docsToProcess))
+
+			for _, doc := range docsToProcess {
+				var bestScore float32
+				var bestChunkIndex = 0
+				for i, chunk := range doc.Chunks {
+					score := vector.FastCosineSimilarity(query, chunk.Embedding)
+					if score > bestScore {
+						bestScore = score
+						bestChunkIndex = i
+					}
+				}
+				if bestScore <= 0 {
+					continue
+				}
+				localResults = append(localResults, SearchResult{
+					Document:          doc,
+					Score:             bestScore,
+					BestMatchingChunk: bestChunkIndex,
+				})
 			}
+
+			allWorkerResults[workerID] = localResults
+		}(index, startIndex, endIndex)
+	}
+
+	wg.Wait()
+
+	results := make([]SearchResult, 0, len(ds.documents))
+	for _, workerResults := range allWorkerResults {
+		if workerResults != nil {
+			results = append(results, workerResults...)
 		}
-		if bestScore <= 0 {
-			continue
-		}
-		results = append(results, SearchResult{
-			Document:          doc,
-			Score:             bestScore,
-			BestMatchingChunk: bestChunkIndex,
-		})
 	}
 
 	slices.SortFunc(results, func(a, b SearchResult) int {
@@ -234,4 +266,31 @@ func (ds *DiskStore) Close() error {
 	defer ds.mu.Unlock()
 
 	return ds.file.Close()
+}
+
+func (ds *DiskStore) calculateDistribution(totalItems, numWorkers int) []int {
+	if numWorkers <= 0 {
+		// Handle invalid case, perhaps return nil or an error
+		// For simplicity here, we might return nil or an empty slice depending on desired behavior.
+		// Let's return nil for this example to indicate an issue.
+		return nil
+	}
+	if totalItems == 0 {
+		workloads := make([]int, numWorkers)
+		// All workers receive 0 items
+		return workloads
+	}
+
+	baseItemsPerWorker := totalItems / numWorkers
+	remainingItems := totalItems % numWorkers
+
+	workloads := make([]int, numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		workloads[i] = baseItemsPerWorker
+		if remainingItems > 0 {
+			workloads[i]++
+			remainingItems--
+		}
+	}
+	return workloads
 }
