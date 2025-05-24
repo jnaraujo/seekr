@@ -110,7 +110,7 @@ func (p *OllamaProvider) embedBlock(ctx context.Context, text string) ([]float32
 	}
 
 	if len(embedding) != config.EmbeddingDimension {
-		return nil, fmt.Errorf("expected %d dimensions, got %d", config.EmbeddingDimension, len(er.Embedding))
+		return nil, fmt.Errorf("expected %d dimensions, got %d", config.EmbeddingDimension, len(embedding))
 	}
 
 	if !vector.IsNormalized(embedding) {
