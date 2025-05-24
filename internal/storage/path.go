@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"unicode/utf8"
 
 	"github.com/jnaraujo/seekr/internal/config"
 )
@@ -60,4 +61,8 @@ func FilePathWalkDir(root string) ([]string, error) {
 		return nil
 	})
 	return files, err
+}
+
+func IsFileValid(content []byte) bool {
+	return utf8.Valid(content)
 }

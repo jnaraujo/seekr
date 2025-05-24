@@ -76,6 +76,11 @@ func indexFile(ctx context.Context, path string) error {
 		return errors.New("failed to read document")
 	}
 
+	// TODO: add PDF support
+	if !storage.IsFileValid(contentBytes) {
+		return fmt.Errorf("document is not a valid file type")
+	}
+
 	content := string(contentBytes)
 	if len(content) == 0 {
 		return errors.New("document is empty")
