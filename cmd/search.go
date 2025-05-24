@@ -32,7 +32,7 @@ var searchCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("# - %% sim - Content - Path")
+		fmt.Println("(#) %% sim - Content - Path")
 		fmt.Println("-----------------------------")
 		for index, res := range results {
 			title := ""
@@ -41,7 +41,7 @@ var searchCmd = &cobra.Command{
 			} else {
 				title = res.Document.Content
 			}
-			fmt.Printf("(%d) - %.2f%% - %s - %s\n", index+1, res.Score*100, title, res.Document.Path)
+			fmt.Printf("(%d) %.2f%% - %s - %s\n", index+1, res.Score*100, title, res.Document.Path)
 		}
 		fmt.Printf("\nFound %d results.\n", len(results))
 	},
