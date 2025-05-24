@@ -139,7 +139,7 @@ func indexFile(ctx context.Context, path string) error {
 
 	chunks, err := embedding.Embed(ctx, content)
 	if err != nil {
-		return errors.New("failed to generate document embeddings")
+		return fmt.Errorf("failed to embed document: %v", err)
 	}
 
 	doc, err := document.NewDocument(id.HashPath(path), chunks, time.Now(), path)
