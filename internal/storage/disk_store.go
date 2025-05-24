@@ -168,12 +168,6 @@ func (ds *DiskStore) Remove(ctx context.Context, id string) error {
 	return nil
 }
 
-type docProcessingResult struct {
-	doc            *document.Document
-	bestScore      float32
-	bestChunkIndex int
-}
-
 func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]SearchResult, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
@@ -184,57 +178,25 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		return nil, ErrNotFound
 	}
 
-	numWorkers := 4
-
-	docChan := make(chan *document.Document, numWorkers)
-	resultsChan := make(chan docProcessingResult, len(ds.documents))
-	var wg sync.WaitGroup
-
-	wg.Add(numWorkers)
-	for range numWorkers {
-		go func() {
-			defer wg.Done()
-
-			for doc := range docChan {
-				var bestScore float32 = -2.0
-				var bestChunkIndex = -1
-
-				for chunkIdx, chunk := range doc.Chunks {
-					score := vector.FastCosineSimilarity(query, chunk.Embedding)
-					if score > bestScore {
-						bestScore = score
-						bestChunkIndex = chunkIdx
-					}
-				}
-
-				if bestChunkIndex != -1 && bestScore > 0 {
-					resultsChan <- docProcessingResult{
-						doc:            doc,
-						bestScore:      bestScore,
-						bestChunkIndex: bestChunkIndex,
-					}
-				}
-			}
-
-		}()
-	}
+	results := make([]SearchResult, 0, len(ds.documents))
 
 	for _, doc := range ds.documents {
-		docChan <- &doc
-	}
-	close(docChan)
-
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
-
-	results := make([]SearchResult, 0, len(ds.documents))
-	for res := range resultsChan {
+		var bestScore float32
+		var bestChunkIndex = 0
+		for i, chunk := range doc.Chunks {
+			score := vector.FastCosineSimilarity(query, chunk.Embedding)
+			if score > bestScore {
+				bestScore = score
+				bestChunkIndex = i
+			}
+		}
+		if bestScore <= 0 {
+			continue
+		}
 		results = append(results, SearchResult{
-			Document:          *res.doc,
-			Score:             res.bestScore,
-			BestMatchingChunk: res.bestChunkIndex,
+			Document:          doc,
+			Score:             bestScore,
+			BestMatchingChunk: bestChunkIndex,
 		})
 	}
 
