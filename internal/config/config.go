@@ -15,5 +15,5 @@ const (
 	ChunkOverlapping   = 100
 	// ollama pull hf.co/nomic-ai/nomic-embed-text-v2-moe-gguf
 	DefaultEmbeddingModel = "hf.co/nomic-ai/nomic-embed-text-v2-moe-gguf"
-	MaxContent            = 10_000
+	MaxContentChars       = 10_000_000
 )

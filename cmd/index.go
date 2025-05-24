@@ -103,7 +103,7 @@ func indexFile(ctx context.Context, path string) error {
 	if len(content) == 0 {
 		return errors.New("document is empty")
 	}
-	if len(content) > config.MaxContent {
+	if len(content) > config.MaxContentChars {
 		return errors.New("document is too large")
 	}
 
