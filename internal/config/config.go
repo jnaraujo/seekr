@@ -10,10 +10,9 @@ const (
 
 const (
 	// Embedding configuration settings
-	EmbeddingDimension = 768
-	MaxChunkChars      = 500
-	ChunkOverlapping   = 100
-	// ollama pull hf.co/nomic-ai/nomic-embed-text-v2-moe-gguf
-	DefaultEmbeddingModel = "hf.co/nomic-ai/nomic-embed-text-v2-moe-gguf"
+	EmbeddingDimension    = 1536
+	MaxChunkChars         = 1000
+	ChunkOverlapping      = 200
+	DefaultEmbeddingModel = "qwen2:1.5b-instruct"
 	MaxContentChars       = 10_000_000
 )
