@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/jnaraujo/seekr/internal/config"
@@ -33,36 +36,47 @@ var indexCmd = &cobra.Command{
 			return
 		}
 
+		// parallelism for embeddings is not yet supported by Ollama, so I think this should be sufficient for now
+		workers := int(math.Max(2, float64(runtime.NumCPU())))
+		channel := make(chan string, workers)
+		var wg sync.WaitGroup
+
+		for range workers {
+			go func() {
+				for file := range channel {
+					err := indexFile(cmd.Context(), file)
+					if err != nil {
+						fmt.Printf("Failed to index %q: %v\n", file, err)
+					} else {
+						fmt.Printf("Document %q indexed successfully!\n", file)
+					}
+					wg.Done()
+				}
+			}()
+		}
+
 		switch pathKind {
 		case storage.DirectoryPathKind:
 			fmt.Printf("Indexing directory %q...\n", inputPath)
 			files, err := storage.FilePathWalkDir(inputPath)
 			if err != nil {
 				fmt.Printf("Failed to index directory %q: %v\n", inputPath, err)
-				return
-			}
-
-			for _, file := range files {
-				err = indexFile(cmd.Context(), file)
-				if err != nil {
-					fmt.Printf("Failed to index %q: %v\n", file, err)
-					continue
+			} else {
+				for _, file := range files {
+					wg.Add(1)
+					channel <- file
 				}
-				fmt.Printf("Document %q indexed successfully!\n", file)
 			}
-			fmt.Printf("Directory %q indexed.\n", inputPath)
 		case storage.FilePathKind:
-			err = indexFile(cmd.Context(), inputPath)
-			if err != nil {
-				fmt.Printf("Failed to index %q: %v\n", inputPath, err)
-				return
-			}
-			fmt.Printf("Document %q indexed successfully!\n", inputPath)
+			wg.Add(1)
+			channel <- inputPath
 		default:
 			fmt.Printf("Failed to index document %q\n", inputPath)
-			return
 		}
 
+		close(channel)
+		wg.Wait()
+		fmt.Println("Indexing complete!")
 	},
 }
 
