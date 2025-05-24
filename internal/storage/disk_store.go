@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -204,7 +205,8 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		return cmp.Compare(b.Score, a.Score)
 	})
 
-	return results[:topK], nil
+	max := int(math.Min(float64(topK), float64(len(ds.documents))))
+	return results[:max], nil
 }
 
 func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, error) {
