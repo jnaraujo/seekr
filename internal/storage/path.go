@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/jnaraujo/seekr/internal/config"
@@ -55,6 +56,13 @@ func CheckPath(path string) (PathKind, error) {
 func FilePathWalkDir(root string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if IsHidden(path) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		if !info.IsDir() {
 			files = append(files, path)
 		}
@@ -65,4 +73,14 @@ func FilePathWalkDir(root string) ([]string, error) {
 
 func IsFileValid(content []byte) bool {
 	return utf8.Valid(content)
+}
+
+func IsHidden(path string) bool {
+	base := filepath.Base(path)
+
+	if base == "." || base == ".." {
+		return false
+	}
+
+	return strings.HasPrefix(base, ".")
 }

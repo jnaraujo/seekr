@@ -81,6 +81,10 @@ func indexFile(ctx context.Context, path string) error {
 		return fmt.Errorf("document is not a valid file type")
 	}
 
+	if storage.IsHidden(path) {
+		return fmt.Errorf("hidden files are not supported")
+	}
+
 	content := string(contentBytes)
 	if len(content) == 0 {
 		return errors.New("document is empty")
