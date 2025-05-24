@@ -203,7 +203,7 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 		return cmp.Compare(b.Score, a.Score)
 	})
 
-	return results, nil
+	return results[:topK], nil
 }
 
 func (ds *DiskStore) Get(ctx context.Context, id string) (document.Document, error) {
