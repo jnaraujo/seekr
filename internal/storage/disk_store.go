@@ -183,7 +183,7 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 
 	dist := ds.calculateDistribution(len(ds.documents), workers)
 
-	allWorkerResults := make([][]SearchResult, workers)
+	resultsCh := make(chan []SearchResult, workers)
 
 	currentDocumentIndex := 0
 	for index, countForThisWorker := range dist {
@@ -218,17 +218,16 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 				})
 			}
 
-			allWorkerResults[workerID] = localResults
+			resultsCh <- localResults
 		}(index, startIndex, endIndex)
 	}
 
 	wg.Wait()
+	close(resultsCh)
 
 	results := make([]SearchResult, 0, len(ds.documents))
-	for _, workerResults := range allWorkerResults {
-		if workerResults != nil {
-			results = append(results, workerResults...)
-		}
+	for workerResults := range resultsCh {
+		results = append(results, workerResults...)
 	}
 
 	slices.SortFunc(results, func(a, b SearchResult) int {
