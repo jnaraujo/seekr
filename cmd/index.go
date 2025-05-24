@@ -36,7 +36,7 @@ var indexCmd = &cobra.Command{
 		switch pathKind {
 		case storage.DirectoryPathKind:
 			fmt.Printf("Indexing directory %q...\n", inputPath)
-			files, err := filePathWalkDir(inputPath)
+			files, err := storage.FilePathWalkDir(inputPath)
 			if err != nil {
 				fmt.Printf("Failed to index directory %q: %v\n", inputPath, err)
 				return
@@ -108,15 +108,4 @@ func indexFile(ctx context.Context, path string) error {
 	}
 
 	return nil
-}
-
-func filePathWalkDir(root string) ([]string, error) {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files, err
 }
