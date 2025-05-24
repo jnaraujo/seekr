@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/bytedance/sonic"
 	"github.com/jnaraujo/seekr/internal/document"
 	"github.com/jnaraujo/seekr/internal/vector"
 )
@@ -56,7 +57,7 @@ func (s *DiskStore) load() error {
 	scanner.Buffer(buf, 100*1024*1024)
 	for scanner.Scan() {
 		var doc document.Document
-		if err := json.Unmarshal(scanner.Bytes(), &doc); err != nil {
+		if err := sonic.Unmarshal(scanner.Bytes(), &doc); err != nil {
 			return err
 		}
 		s.documents = append(s.documents, doc)
