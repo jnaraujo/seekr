@@ -65,7 +65,6 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]Chunk, error
 			return nil, err
 		}
 		chunks = append(chunks, Chunk{
-			Block:     block,
 			Embedding: emb,
 		})
 	}

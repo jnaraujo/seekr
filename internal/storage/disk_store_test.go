@@ -34,8 +34,7 @@ func TestIndexAndGet(t *testing.T) {
 	ctx := context.Background()
 	doc, err := document.NewDocument("doc1", []embeddings.Chunk{{
 		Embedding: []float32{1, 0},
-		Block:     "empty",
-	}}, "empty", time.Now(), "path/example")
+	}}, time.Now(), "path/example")
 	assert.NoError(t, err)
 
 	err = ds.Index(ctx, doc)
@@ -58,23 +57,19 @@ func TestSearchOrdering(t *testing.T) {
 	d1, _ := document.NewDocument("a", []embeddings.Chunk{
 		{
 			Embedding: []float32{0.5, 0.5},
-			Block:     "block1",
 		},
 		{
 			Embedding: []float32{1.0, 0.0},
-			Block:     "block2",
 		},
-	}, "", time.Now(), "path/example")
+	}, time.Now(), "path/example")
 	d2, _ := document.NewDocument("b", []embeddings.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
-			Block:     "block1",
 		},
 		{
 			Embedding: []float32{0.1, 1.0},
-			Block:     "block2",
 		},
-	}, "", time.Now(), "path/example")
+	}, time.Now(), "path/example")
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -88,7 +83,6 @@ func TestSearchOrdering(t *testing.T) {
 	bestDoc := results[0]
 	bestChunk := bestDoc.Document.Chunks[bestDoc.BestMatchingChunk]
 	assert.Equal(t, "b", bestDoc.Document.ID)
-	assert.Equal(t, "block2", bestChunk.Block)
 	assert.True(t, vector.CosineSimilarity(query, bestChunk.Embedding) > results[1].Score)
 }
 
@@ -109,23 +103,19 @@ func TestList(t *testing.T) {
 	d1, _ := document.NewDocument("a", []embeddings.Chunk{
 		{
 			Embedding: []float32{0.5, 0.5},
-			Block:     "block1",
 		},
 		{
 			Embedding: []float32{1.0, 0.0},
-			Block:     "block2",
 		},
-	}, "", time.Now(), "path/example")
+	}, time.Now(), "path/example")
 	d2, _ := document.NewDocument("b", []embeddings.Chunk{
 		{
 			Embedding: []float32{1.0, 0.0},
-			Block:     "block1",
 		},
 		{
 			Embedding: []float32{0.1, 1.0},
-			Block:     "block2",
 		},
-	}, "", time.Now(), "path/example")
+	}, time.Now(), "path/example")
 
 	assert.NoError(t, ds.Index(ctx, d1))
 	assert.NoError(t, ds.Index(ctx, d2))
@@ -147,8 +137,7 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 
 		doc, _ := document.NewDocument("persist", []embeddings.Chunk{{
 			Embedding: []float32{0.5, 0.5},
-			Block:     "This is a test chunk",
-		}}, "content", time.Now(), "path/example")
+		}}, time.Now(), "path/example")
 		assert.NoError(t, ds.Index(context.Background(), doc))
 	}
 
@@ -176,9 +165,9 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	doc1 := document.Document{ID: "id1", Content: "data1"}
-	doc2 := document.Document{ID: "id2", Content: "data2"}
-	doc3 := document.Document{ID: "id3", Content: "data3"}
+	doc1 := document.Document{ID: "id1"}
+	doc2 := document.Document{ID: "id2"}
+	doc3 := document.Document{ID: "id3"}
 	docs := createDocumentsOnDisk(t, []document.Document{doc1, doc2, doc3})
 
 	dir := t.TempDir()

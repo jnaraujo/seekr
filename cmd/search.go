@@ -32,16 +32,10 @@ var searchCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("(#) %% sim - Content - Path")
+		fmt.Println("(#) %% sim - Path")
 		fmt.Println("-----------------------------")
 		for index, res := range results {
-			title := ""
-			if len(res.Document.Content) > 30 {
-				title = res.Document.Content[:30] + "..."
-			} else {
-				title = res.Document.Content
-			}
-			fmt.Printf("(%d) %.2f%% - %s - %s\n", index+1, res.Score*100, title, res.Document.Path)
+			fmt.Printf("(%d) %.2f%% - %s\n", index+1, res.Score*100, res.Document.Path)
 		}
 		fmt.Printf("\nFound top %d results.\n", len(results))
 	},

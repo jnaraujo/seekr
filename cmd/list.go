@@ -28,13 +28,7 @@ var listCmd = &cobra.Command{
 
 		maxDigits := countDigits(len(docs))
 		for index, doc := range docs {
-			title := ""
-			if len(doc.Content) > 30 {
-				title = doc.Content[:30] + "..."
-			} else {
-				title = doc.Content
-			}
-			fmt.Printf("(%0*d) %s - %s\n", maxDigits, index, title, doc.Path)
+			fmt.Printf("(%0*d) %s\n", maxDigits, index, doc.Path)
 		}
 	},
 }

@@ -13,12 +13,11 @@ type Metadata = map[string]string
 type Document struct {
 	ID        string
 	Chunks    []embeddings.Chunk
-	Content   string
 	CreatedAt time.Time
 	Path      string
 }
 
-func NewDocument(id string, chunks []embeddings.Chunk, content string, createdAt time.Time, path string) (Document, error) {
+func NewDocument(id string, chunks []embeddings.Chunk, createdAt time.Time, path string) (Document, error) {
 	if id == "" {
 		return Document{}, errors.New("id is empty")
 	}
@@ -36,7 +35,6 @@ func NewDocument(id string, chunks []embeddings.Chunk, content string, createdAt
 	return Document{
 		ID:        id,
 		Chunks:    normalizedChunks,
-		Content:   content,
 		CreatedAt: createdAt,
 		Path:      path,
 	}, nil

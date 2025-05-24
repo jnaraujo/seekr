@@ -4,7 +4,6 @@ import "context"
 
 type Chunk struct {
 	Embedding []float32
-	Block     string
 }
 
 type Provider interface {
