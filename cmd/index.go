@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/jnaraujo/seekr/internal/document"
 	"github.com/jnaraujo/seekr/internal/id"
 	"github.com/jnaraujo/seekr/internal/storage"
+	"github.com/ledongthuc/pdf"
 	"github.com/spf13/cobra"
 )
 
@@ -85,26 +87,48 @@ func init() {
 }
 
 func indexFile(ctx context.Context, path string) error {
+	if storage.IsHidden(path) {
+		return fmt.Errorf("hidden files are not supported")
+	}
+
 	contentBytes, err := os.ReadFile(path)
 	if err != nil {
 		return errors.New("failed to read document")
 	}
 
-	// TODO: add PDF support
-	if !storage.IsFileValid(contentBytes) {
+	fileExt := filepath.Ext(path)
+	isPDF := fileExt == ".pdf"
+	contentIsUnsupportedByStorage := !storage.IsFileValid(contentBytes)
+	if !isPDF && contentIsUnsupportedByStorage {
 		return fmt.Errorf("document is not a valid file type")
 	}
 
-	if storage.IsHidden(path) {
-		return fmt.Errorf("hidden files are not supported")
+	content := ""
+	if isPDF {
+		r, err := pdf.NewReader(bytes.NewReader(contentBytes), int64(len(contentBytes)))
+		if err != nil {
+			return fmt.Errorf("failed to read pdf")
+		}
+		plainReader, err := r.GetPlainText()
+		if err != nil {
+			return fmt.Errorf("failed to read pdf content")
+		}
+		var buf bytes.Buffer
+		buf.ReadFrom(plainReader)
+		content = buf.String()
+	} else {
+		content = string(contentBytes)
 	}
 
-	content := string(contentBytes)
 	if len(content) == 0 {
 		return errors.New("document is empty")
 	}
 	if len(content) > config.MaxContentChars {
 		return errors.New("document is too large")
+	}
+
+	if len(content) >= config.MaxContentChars/20 {
+		fmt.Println("the document is large, and indexing may take some time, do not interrupt the process")
 	}
 
 	if _, err := store.Get(ctx, id.HashPath(path)); err == nil {
