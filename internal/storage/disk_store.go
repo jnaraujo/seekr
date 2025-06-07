@@ -1,10 +1,10 @@
 package storage
 
 import (
-	"bufio"
+	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +14,6 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/bytedance/sonic"
 	"github.com/jnaraujo/seekr/internal/document"
 	"github.com/jnaraujo/seekr/internal/vector"
 )
@@ -47,22 +46,63 @@ func NewDiskStore(path string) (*DiskStore, error) {
 	return ds, err
 }
 
-func (s *DiskStore) load() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (ds *DiskStore) load() error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
-	s.documents = s.documents[:0]
-	scanner := bufio.NewScanner(s.file)
-	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 100*1024*1024)
-	for scanner.Scan() {
-		var doc document.Document
-		if err := sonic.Unmarshal(scanner.Bytes(), &doc); err != nil {
-			return err
+	data, err := os.ReadFile(ds.filePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
 		}
-		s.documents = append(s.documents, doc)
+		return err
 	}
-	return scanner.Err()
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(&ds.documents); err != nil {
+		if err == io.EOF {
+			return nil
+		}
+		return fmt.Errorf("failed to decode gob data: %w", err)
+	}
+
+	return nil
+}
+
+func (ds *DiskStore) persist() error {
+	tempFile, err := os.CreateTemp(filepath.Dir(ds.filePath), filepath.Base(ds.filePath)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("persist: failed to create temporary file: %w", err)
+	}
+	tempFilePath := tempFile.Name()
+
+	encoder := gob.NewEncoder(tempFile)
+	if err := encoder.Encode(ds.documents); err != nil {
+		tempFile.Close()
+		os.Remove(tempFilePath)
+		return fmt.Errorf("persist: failed to encode documents to gob: %w", err)
+	}
+
+	if err := tempFile.Sync(); err != nil {
+		tempFile.Close()
+		os.Remove(tempFilePath)
+		return fmt.Errorf("persist: failed to sync temporary file: %w", err)
+	}
+
+	if err := tempFile.Close(); err != nil {
+		os.Remove(tempFilePath)
+		return fmt.Errorf("persist: failed to close temporary file: %w", err)
+	}
+
+	if err := os.Rename(tempFilePath, ds.filePath); err != nil {
+		return fmt.Errorf("persist: failed to rename temporary file: %w", err)
+	}
+
+	return nil
 }
 
 func (ds *DiskStore) Index(ctx context.Context, document document.Document) error {
@@ -76,15 +116,7 @@ func (ds *DiskStore) Index(ctx context.Context, document document.Document) erro
 
 	ds.documents = append(ds.documents, document)
 
-	line, err := json.Marshal(document)
-	if err != nil {
-		return err
-	}
-	if _, err := ds.file.Write(append(line, '\n')); err != nil {
-		return err
-	}
-	// Ensure write is flushed to disk
-	return ds.file.Sync()
+	return ds.persist()
 }
 
 func (ds *DiskStore) Remove(ctx context.Context, id string) error {
@@ -103,71 +135,8 @@ func (ds *DiskStore) Remove(ctx context.Context, id string) error {
 		return ErrNotFound
 	}
 
-	tempFileDir := filepath.Dir(ds.filePath)
-	tempFile, err := os.CreateTemp(tempFileDir, filepath.Base(ds.filePath)+".*.tmp")
-	if err != nil {
-		return fmt.Errorf("Remove: failed to create temporary file: %w", err)
-	}
-
-	tempFilePath := tempFile.Name()
-	operationSuccessful := false
-	defer func() {
-		tempFile.Close()
-		if !operationSuccessful {
-			os.Remove(tempFilePath)
-		}
-	}()
-
-	writer := bufio.NewWriter(tempFile)
-	for i, doc := range ds.documents {
-		if i == foundIndex {
-			continue
-		}
-		line, err := json.Marshal(doc)
-		if err != nil {
-			return fmt.Errorf("remove: failed to marshal document ID %s: %w", doc.ID, err)
-		}
-		if _, writeErr := writer.Write(append(line, '\n')); writeErr != nil {
-			return fmt.Errorf("remove: failed to write document ID %s to temporary file: %w", doc.ID, writeErr)
-		}
-	}
-
-	if err := writer.Flush(); err != nil {
-		return err
-	}
-
-	if err = tempFile.Sync(); err != nil {
-		return fmt.Errorf("remove: failed to sync temporary file: %w", err)
-	}
-
-	if err = tempFile.Close(); err != nil {
-		return fmt.Errorf("remove: failed to close temporary file: %w", err)
-	}
-
-	if err = ds.file.Close(); err != nil {
-		return fmt.Errorf("remove: failed to close main data file (%s): %w "+
-			"Temporary data not applied", ds.filePath, err)
-	}
-
-	if err = os.Rename(tempFilePath, ds.filePath); err != nil {
-		currentFile, err := os.OpenFile(ds.filePath, os.O_CREATE|os.O_RDWR, 0o644)
-		if err == nil {
-			ds.file = currentFile
-		}
-		return fmt.Errorf("remove: CRITICAL - failed to rename temporary file from %s to %s: %w. "+
-			"The new data *might* still be in %s (check cleanup logic). Original file state: %s",
-			tempFilePath, ds.filePath, err, tempFilePath, ds.filePath)
-	}
-
-	newFile, err := os.OpenFile(ds.filePath, os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		return fmt.Errorf("remove: CRITICAL - data file %s updated successfully on disk, but failed to reopen: %w. "+
-			"DiskStore's file handle is invalid. In-memory document list is OUT OF SYNC with disk", ds.filePath, err)
-	}
-	ds.file = newFile
 	ds.documents = slices.Delete(ds.documents, foundIndex, foundIndex+1)
-	operationSuccessful = true
-	return nil
+	return ds.persist()
 }
 
 func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]SearchResult, error) {
@@ -177,7 +146,7 @@ func (ds *DiskStore) Search(ctx context.Context, query []float32, topK int) ([]S
 	query = vector.Normalize(query)
 
 	if len(ds.documents) == 0 {
-		return nil, ErrNotFound
+		return []SearchResult{}, nil
 	}
 
 	results := make([]SearchResult, 0, len(ds.documents))
@@ -230,12 +199,11 @@ func (ds *DiskStore) getInternal(_ context.Context, id string) (document.Documen
 func (ds *DiskStore) List(ctx context.Context) ([]document.Document, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
-	return ds.documents, nil
+	docsCopy := make([]document.Document, len(ds.documents))
+	copy(docsCopy, ds.documents)
+	return docsCopy, nil
 }
 
 func (ds *DiskStore) Close() error {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
-	return ds.file.Close()
+	return nil
 }

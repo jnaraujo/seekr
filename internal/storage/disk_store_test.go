@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -91,8 +90,9 @@ func TestSearchEmpty(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	_, err := ds.Search(ctx, []float32{1, 2, 3}, 1)
-	assert.ErrorIs(t, err, ErrNotFound)
+	res, err := ds.Search(ctx, []float32{1, 2, 3}, 1)
+	assert.NoError(t, err)
+	assert.Len(t, res, 0)
 }
 
 func TestList(t *testing.T) {
@@ -149,18 +149,6 @@ func TestPersistenceAcrossLoads(t *testing.T) {
 		got, err := ds2.Get(context.Background(), "persist")
 		assert.NoError(t, err)
 		assert.Equal(t, "persist", got.ID)
-
-		// Also ensure that the file contains a correct JSON line
-		bytes, err := os.ReadFile(file)
-		assert.NoError(t, err)
-		var docs []document.Document
-		for _, line := range splitLines(bytes) {
-			var d document.Document
-			assert.NoError(t, json.Unmarshal(line, &d))
-			docs = append(docs, d)
-		}
-		assert.Len(t, docs, 1)
-		assert.Equal(t, "persist", docs[0].ID)
 	}
 }
 
