@@ -10,9 +10,9 @@ const (
 
 const (
 	// Embedding configuration settings
-	EmbeddingDimension    = 1536
+	EmbeddingDimension    = 768
 	MaxChunkChars         = 1000
 	ChunkOverlapping      = 200
-	DefaultEmbeddingModel = "qwen2:1.5b-instruct"
+	DefaultEmbeddingModel = "hf.co/nomic-ai/nomic-embed-text-v2-moe-gguf"
 	MaxContentChars       = 10_000_000
 )
